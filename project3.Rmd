@@ -1,0 +1,270 @@
+---
+title: "Recreational Sales Data"
+author: "Group 7: Allison Dinh, Diana Luong, Lauren Kagetsu and Myeongin Oh"
+resource_files:
+- .Renviron
+output:
+  html_notebook:
+    code_folding: hide
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+runtime: shiny
+---
+
+#About the Data
+This is a sample dataset of sales information for outdoor recreational products. For each sale, information about its retailer country, revenue earned, quantity, and gross margin is provided. Our approach to visualizing this data was to group the sales by retailer country and understand the differences between their sales trends. This would allows us to narrow down our analysis by country and draw more specific conclusions.
+
+#Links
+[Data.word Link](https://data.world/diana-luong/s18-edv-project-3)
+
+[GitHub Classroom Repository Link](https://github.com/CannataUTDV/s18dvproject3-kagetsu-luong-dinh-oh)
+
+#Load Packages
+This [code chunk](http://rmarkdown.rstudio.com/authoring_rcodechunks.html) loads the packages required to run the R code in the document.
+The last line of this code chunk enables document caching, which is expalined at this [link](http://rmarkdown.rstudio.com/authoring_rcodechunks.html).
+
+```{r setup, echo=FALSE}
+library(tidyverse)
+library(shiny)
+library(grid)
+library(data.world)
+library(DT)
+library(shinydashboard)
+library(plotly)
+library(lubridate)
+library(ggplot2)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Input Panel with Select List
+The following code are the steps in creating an input panel for the Interactive Document, which has a select box for selecting retailer countries.
+```{r}
+#CREATE DATAFRAMES
+#The sourced code below contains Shiny eventReactive code and queries for the project2dataset database at data.world. The data is saved in variables as functions that return an R dataframe.
+source("DataA.R", local = TRUE)
+source("DataB.R", local = TRUE)
+
+
+#RETRIEVE RETAILER COUNTRY
+#The following query retrieves the distinct retailer country from the project3dataset at data.world and saves the retailer country in the country variable.
+project <- "https://data.world/diana-luong/s18-edv-project-3" 
+data.world::set_config(cfg_env("DW_API")) 
+country <- data.world::query(data.world::qry_sql(
+ "   
+	select distinct retailer_country
+	from project3dataset
+ "), 
+dataset = project)
+
+
+#CREATE A COUNTRY VARIABLE
+#Create a Country variable with a string constructed from the selected races in the input$selectCountry variable.This Country variable will be used in the title of the ggplot below.
+Country <- eventReactive(c(input$selectCountry), { 
+  library('stringr')
+  str_c(input$selectCountry, collapse=', ')
+})
+
+
+#CREATE INPUT PANEL
+inputPanel(
+  selectInput("selectCountry", label = "Select Retailer Country",choices = country, multiple=TRUE, selected=c("United States", "Canada", "Mexico", "Japan", "Brazil", "Singapore", "Korea", "China", "Australia", "Netherlands", "Sweden", "Denmark", "Finland", "France", "Germany", "Switzerland", "United Kingdom", "Belgium", "Austria", "Italy", "Spain"))
+)
+```
+
+#Visualization Dashboard
+The following code will render and display the boxplot, histogram, scatterplot and bar graph of the retailer country using [ggplotly](https://www.rdocumentation.org/packages/plotly/versions/4.7.1/topics/ggplotly) and [shinydashborad](https://rstudio.github.io/shinydashboard/structure.html#dynamic-content-1).
+
+Side Note: Loading the plots and the data will take some time due to the large amount of records.
+```{r}
+dashboardPage(
+  dashboardHeader(
+  ),
+  dashboardSidebar(
+    sidebarMenu(
+      menuItem("Histogram", tabName = "histogram", icon = icon("dashboard")),
+      menuItem("Boxplot", tabName = "boxplot", icon = icon("dashboard")),
+      menuItem("Bar Graph", tabName = "bar", icon = icon("dashboard")),
+      menuItem("Scatterplot", tabName = "scatterplot", icon = icon("dashboard"))
+    )
+  ),
+  dashboardBody(
+    tabItems(
+      # 1. "Histogram" tab content
+      tabItem(tabName = "histogram",
+        p("We chose a histogram as our first stage of analysis because we wanted to explore the sales data based on its revenue. Our first observation was that the histogram was right-skewed. Additionally, the first bin, with a range limit between $0 and $20,000, had the largest count. We applied a color filter based on retailer country, but found it difficult to deduce much from the histogram representation, which led us to using a boxplot."),
+        source("HistogramUI.R",local = TRUE)$value
+      ),
+      # 2. "Boxplot" tab content
+      tabItem(tabName = "boxplot",
+        p("Moving on to the boxplot, we chose this visualization because we wanted to know which country had the highest revenue and also be able to exclude outliers in making any deductions. The United States stood out to us as the country to examine further because it had the highest revenue median, outlier value, largest range, and the most outliers. We predicted that the United States would have the highest profit and used a bar graph as our next method of analysis."),
+        source("BoxplotUI.R",local = TRUE)$value
+      ),
+      # 3. "Bar Graph" tab content
+      tabItem(tabName = "bar",
+        p("Next, we created a new table variable, profit, which is revenue/(quantity*gross_margin) in order to compare the retailer countries by their profit. We wanted to take into account the quantity and the gross margin. This bar graph showed us that the United States was also the most profitable country for outdoor recreational sales."),
+        source("BarUI.R",local = TRUE)$value
+      ),
+      # 4. "Scatterplot" tab content
+      tabItem(tabName = "scatterplot",
+        p("Finally, narrowing down our analysis even further, we produced a scatter plot of just United States sales to look at the difference in sales between product lines (golf, personal accessories, outdoor protection, mountaineering, and camping). We used the scatter plot so that we could view the top 20% of the most profitable products. We then colored the data points by product line and found their subsequent trend lines. We observed that the golf equipment had the steepest trend line and the personal accessories had the narrowest trend line. Additionally, it was surprising to find that outdoor protection did not make it into this scatter plot because it was not a part of the top 20% of profitable products."),
+        source("ScatterplotUI.R",local = TRUE)$value
+      )
+    )
+  )
+)
+
+source("HistogramServer.R", local = TRUE)
+source("BoxplotServer.R", local = TRUE)
+source("BarServer.R", local = TRUE)
+source("ScatterplotServer.R", local = TRUE)
+```
+
+What we concluded from our exploration of this sample data set, in both the above plots and the ones from our data.world insights, it would be advisable to invest more efforts in the online sale of golf equipment. We recommend this because based on our scatterplot, a smaller quantity of golf equipment sales produces a larger profit. Additionally from our other insights on data.world, we discovered that most sales and revenue are made through online orders.
+
+
+#Insights 
+## {.tabset .tabset-fade}
+The following are links to data.world and visuals of the insights posted over a period of time about the things we found interesting about this data.
+
+### Insight 1 
+[Insight 1](https://data.world/allisondinh/s18-edv-project-2/insights/5eec79be-f893-440f-8c0c-087fbe79e582)
+
+<iframe src="https://public.tableau.com/views/insight1_2/Sheet1?:showVizHome=no" width="800" height="500"></iframe>
+
+### Insight 2
+[Insight 2](https://data.world/diana-luong/s18-edv-project-3/insights/145576e1-07ff-4f59-9534-76846510ba27)
+
+<iframe src="https://public.tableau.com/views/project3insight1/Sheet1?:showVizHome=no" width="800" height="500"></iframe>
+
+### Insight 3
+[Insight 3](https://data.world/diana-luong/s18-edv-project-3/insights/6387f9f1-05be-4cbe-b003-a7271dbc6d49)
+
+<iframe src="https://public.tableau.com/views/proj3_2_0/Sheet1?:showVizHome=no" width="800" height="500"></iframe>
+
+### Insight 4
+[Insight 4](https://data.world/diana-luong/s18-edv-project-3/insights/36297b78-3f48-4b1e-b556-e074be6d446e)     
+
+<iframe src="https://public.tableau.com/views/dv_s18_p2policeuseofforce/Sheet1?:showVizHome=no" width="800" height="500"></iframe>
+
+### Insight 5
+[Insight 5](https://data.world/diana-luong/s18-edv-project-3/insights/7a88daf8-1fb3-4054-a2cb-6969886c2279)
+
+<iframe src="https://public.tableau.com/shared/2F6FT8DJF?:showVizHome=no" width="800" height="500"></iframe>
+
+### Insight 6
+[Insight 6](https://data.world/diana-luong/s18-edv-project-3/insights/dda93630-2812-41f0-9701-918b763a043d)     
+
+<iframe src="https://public.tableau.com/views/proj2_i1/Sheet1?:showVizHome=no" width="800" height="500"></iframe>
+
+### Insight 7
+[Insight 7](https://data.world/diana-luong/s18-edv-project-3/insights/3cd6fe5e-a33a-4ab2-a400-a064a3641d74)     
+
+<iframe src="https://public.tableau.com/views/project3insight3/Sheet1?:showVizHome=no" width="800" height="500"></iframe>
+
+### Insight 8
+[Insight 8](https://data.world/diana-luong/s18-edv-project-3/insights/95ef7b9c-ee4c-48fa-8542-46ca6658ed15)     
+
+<iframe src="https://public.tableau.com/views/project3insight2_0/Dashboard1?:showVizHome=no" width="800" height="500"></iframe>
+
+### Insight 9
+[Insight 9](https://data.world/diana-luong/s18-edv-project-3/insights/abea4983-170e-46dc-a961-b8870794be79)
+
+<iframe src="https://public.tableau.com/shared/JZ2PTKZHC?:showVizHome=no" width="800" height="500"></iframe>
+
+### Insight 10
+[Insight 10](https://data.world/diana-luong/s18-edv-project-3/insights/f3ba9e14-6721-432b-8143-d06b534d84b1)
+
+<iframe src="https://public.tableau.com/views/project3insight3_0/Dashboard1?:showVizHome=no" width="800" height="500"></iframe>
+
+### Insight 11
+[Insight 11](https://data.world/diana-luong/s18-edv-project-3/insights/7761c6d2-0caf-4d1a-b096-5b7f05263365)
+
+<iframe src="https://public.tableau.com/shared/JZ2PTKZHC?:showVizHome=no" width="800" height="500"></iframe>
+
+### Insight 12
+[Insight 12](https://data.world/diana-luong/s18-edv-project-3/insights/342f18a6-f0cf-4466-9fff-0378cdc2e762)
+
+<iframe src="https://public.tableau.com/views/project3insight4_0/RevenueandQuanityHistogram?:showVizHome=no" width="800" height="500"></iframe>
+
+### Insight 13
+[Insight 13](https://data.world/diana-luong/s18-edv-project-3/insights/f410f069-e4fe-40f6-9044-a406f754bed5)
+
+<iframe src="https://public.tableau.com/views/QuanityandRevenueScatterplot/Sheet4?:showVizHome=no" width="800" height="500"></iframe>
+
+### Insight 14
+[Insight 14](https://data.world/diana-luong/s18-edv-project-3/insights/77faa765-ad07-44bb-9de5-0c195540d96e)
+
+<iframe src="https://public.tableau.com/views/RetailerCountryandRevenueBoxplot/Sheet5?:showVizHome=no" width="800" height="500"></iframe>
+
+### Insight 15
+[Insight 15](https://data.world/diana-luong/s18-edv-project-3/insights/84f13ccc-f291-4413-b715-4240ebd747fe)
+
+<iframe src="https://public.tableau.com/views/RevenueHistogram/Sheet3?:showVizHome=no" width="800" height="500"></iframe>
+
+### Insight 16
+[Insight 16](https://data.world/diana-luong/s18-edv-project-3/insights/cd192230-4c0d-4149-92b0-1194174b1fae)
+
+<iframe src="https://public.tableau.com/views/project3insight5/Sheet2?:showVizHome=no" width="800" height="500"></iframe>
+
+### Insight 17
+[Insight 17](https://data.world/diana-luong/s18-edv-project-3/insights/304c96c6-1eca-428a-8fb2-59e7b4605347)
+
+<iframe src="https://public.tableau.com/views/proj3_6/Sheet1?:showVizHome=no" width="800" height="500"></iframe>
+
+### Insight 18
+[Insight 18](https://data.world/diana-luong/s18-edv-project-3/insights/57f85e5a-413e-4bb3-b5a1-396a335f3d7d)
+
+<iframe src="https://public.tableau.com/views/project3insight5_0/Sheet1?:showVizHome=no" width="800" height="500"></iframe>
+
+#Appendix
+
+##Display Session Information
+```{r}
+sessionInfo()
+```
+
+##Data Cleaning Code
+```{r}
+library(tidyverse)
+csvURL <- "https://query.data.world/s/z3uillcsuirqz3x24s7ss2kyub3qjv"
+df <- read_csv(csvURL, col_types = list(
+  'retailer_country' = col_character(),
+  'order_method_type' = col_character(),
+  'retailer_type' = col_character(),
+  'product_line' = col_character(),
+  'product_type' = col_character(),
+  'product' = col_character(),
+  'year' = col_number(),
+  'quarter' = col_number(),
+  'revenue' = col_number(),
+  'quantity' = col_number(),
+  'gross_margin' = col_number()
+))
+
+# Clean column names.
+
+names(df) <- gsub("[^ -~]", "", names(df)) 
+
+# Clean data.
+df <- df %>% dplyr::mutate_all(funs(gsub(pattern="(20..) (..)", replacement= "\\2", .)))
+df <- df %>% dplyr::mutate_all(funs(gsub(pattern="[^ -~]", replacement= "", .)))
+
+# The following write_csv followed immediately by a read_csv, fixes the column types.
+write_csv(df, "tmp7.csv")
+df <- read_csv("tmp7.csv", col_types = list(
+  'retailer_country' = col_character(),
+  'order_method_type' = col_character(),
+  'retailer_type' = col_character(),
+  'product_line' = col_character(),
+  'product_type' = col_character(),
+  'product' = col_character(),
+  'year' = col_number(),
+  'quarter' = col_number(),
+  'revenue' = col_number(),
+  'quantity' = col_number(),
+  'gross_margin' = col_number()
+))
+# Now save the cleaned data to new.csv
+write_csv(df, "project3dataset.csv")
+```
